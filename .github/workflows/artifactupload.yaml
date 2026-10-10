@@ -1,0 +1,43 @@
+name: workflow
+on: workflow_dispatch
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      filename: ${{ steps.publish-js-files.outputs.filename }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run a one-line script
+        run: echo Hello, world!
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+      - name: Run a multi-line script
+        id: build-and-test
+        run: |
+          npm ci
+          npm run build
+          npm test
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: dist-files
+          path: |
+            dist/
+      - name: Publish JS Files
+        id: publish-js-files
+        run: echo "filename=$(basename dist/assets/*.js)" >> "$GITHUB_OUTPUT"
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Deploy to production
+        run: echo Deploying to production...
+      - uses: actions/download-artifact@v3
+        with:
+          name: dist-files
+      - name: List downloaded artifacts
+        run: ls -R dist/
+      - name: Use the filename output from the build job
+        run: echo "The filename from the build job is: ${{ needs.build.outputs.filename }}"
